@@ -1,3 +1,11 @@
+# Installation
+
+```
+git clone git@github.com:arosl/spftree.git
+
+pip install -r requirements.txt
+```
+
 # Usage
 
 ```

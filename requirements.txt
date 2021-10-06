@@ -1,0 +1,2 @@
+dnspython==2.1.0
+typer==0.4.0
