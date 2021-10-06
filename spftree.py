@@ -4,8 +4,8 @@ import sys
 import dns.resolver
 
 spf_keywords = ['all', 'a', 'ip4', 'ip6', 'mx',
-                'ptr', 'exists', 'include', 'v=spf1', '"v=spf1']
-
+                'ptr', 'exists', 'include', 'redirect', 'v=spf1', '"v=spf1']
+spf_modifiers = ['+', '-', '~', '?']
 
 def get_spf_from_zone(zone: str, timeout: float = 1.0):
     """
@@ -23,7 +23,17 @@ def get_spf_from_zone(zone: str, timeout: float = 1.0):
                 return record
     except Exception as e:
         typer.echo(f"Error: {zone} {e}", err=sys.stderr)
-        typer.Abort()
+        return
+
+def spf_validator(mechanism: str, validate: bool = True):
+    if not validate:
+        return True
+    else:
+        mechanism = mechanism.split(':')[0]
+        for c in spf_modifiers:
+            mechanism = mechanism.replace(c, '')
+        if mechanism in spf_keywords:
+            return True
 
 
 def spftree(zone: str, indent: int = 0):
@@ -41,7 +51,10 @@ def spftree(zone: str, indent: int = 0):
 
     for field in spf_record.split():
         field = field.decode()
-        typer.echo(' ' * indent + field)
+        if spf_validator(field):
+            typer.secho(' ' * indent + field, fg=typer.colors.GREEN)
+        else:
+            typer.secho(' ' * indent + field, fg=typer.colors.RED)
         if field.find('include:') != -1:
             nextzone = field[field.index(':')+1:]
             spftree(nextzone, indent+2)
