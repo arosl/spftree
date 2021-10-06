@@ -36,7 +36,7 @@ def spf_validator(mechanism: str, validate: bool = True):
             return True
 
 
-def spftree(zone: str, indent: int = 0):
+def spftree(zone: str, indent: int = 0, validate: bool = True):
     """
     Create a tree structure of the zones SPF record
     """
@@ -51,7 +51,7 @@ def spftree(zone: str, indent: int = 0):
 
     for field in spf_record.split():
         field = field.decode()
-        if spf_validator(field):
+        if spf_validator(field, validate):
             typer.secho(' ' * indent + field, fg=typer.colors.GREEN)
         else:
             typer.secho(' ' * indent + field, fg=typer.colors.RED)
