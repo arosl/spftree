@@ -34,6 +34,8 @@ def spf_validator(mechanism: str, validate: bool = True):
             mechanism = mechanism.replace(c, '')
         if mechanism in spf_keywords:
             return True
+        else:
+            return False
 
 
 def spftree(zone: str, indent: int = 0, validate: bool = True):
