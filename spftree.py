@@ -1,4 +1,5 @@
 #!/bin/env python3
+from dns.exception import DNSException
 import typer
 import sys
 import dns.resolver
@@ -22,8 +23,8 @@ def get_spf_from_zone(zone: str, timeout: float = 1.0):
             if str(record).split()[0] in spf_keywords:
                 return record
     except Exception as e:
-        typer.echo(f"Error: {zone} {e}", err=sys.stderr)
-        return
+        typer.secho(f"Error: {zone} {e}", err=sys.stderr, fg=typer.colors.BRIGHT_MAGENTA)
+        typer.Exit
 
 def spf_validator(mechanism: str, validate: bool = True):
     if not validate:
@@ -44,20 +45,23 @@ def spftree(zone: str, indent: int = 0, validate: bool = True):
 
     # FIXME Combine records with multiple strings
     # It can possbily be n number of strings
-    if len(record.strings) > 1:
-        spf_record = record.strings[0] + record.strings[1]
-    else:
-        spf_record = record.strings[0]
-
-    for field in spf_record.split():
-        field = field.decode()
-        if spf_validator(field, validate):
-            typer.secho(' ' * indent + field, fg=typer.colors.GREEN)
+    try:
+        if len(record.strings) > 1:
+            spf_record = record.strings[0] + record.strings[1]
         else:
-            typer.secho(' ' * indent + field, fg=typer.colors.RED)
-        if field.find('include:') != -1:
-            nextzone = field[field.index(':')+1:]
-            spftree(nextzone, indent+2)
+            spf_record = record.strings[0]
+
+        for field in spf_record.split():
+            field = field.decode()
+            if spf_validator(field, validate):
+                typer.secho(' ' * indent + field, fg=typer.colors.GREEN)
+            else:
+                typer.secho(' ' * indent + field, fg=typer.colors.RED)
+            if field.find('include:') != -1:
+                nextzone = field[field.index(':')+1:]
+                spftree(nextzone, indent+2)
+    except AttributeError as e:
+        typer.secho(f"Error: {zone} {e}", err=sys.stderr, fg=typer.colors.BRIGHT_MAGENTA)
 
 
 if __name__ == "__main__":
