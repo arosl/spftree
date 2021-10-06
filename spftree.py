@@ -1,5 +1,4 @@
 #!/bin/env python3
-from dns.exception import DNSException
 import typer
 import sys
 import dns.resolver
