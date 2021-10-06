@@ -7,6 +7,7 @@ spf_keywords = ['all', 'a', 'ip4', 'ip6', 'mx',
                 'ptr', 'exists', 'include', 'redirect', 'v=spf1', '"v=spf1']
 spf_modifiers = ['+', '-', '~', '?']
 
+
 def get_spf_from_zone(zone: str, timeout: float = 1.0):
     """
     Get SPF record from zone by checking if the TXT record contains 
@@ -22,8 +23,10 @@ def get_spf_from_zone(zone: str, timeout: float = 1.0):
             if str(record).split()[0] in spf_keywords:
                 return record
     except Exception as e:
-        typer.secho(f"Error: {zone} {e}", err=sys.stderr, fg=typer.colors.BRIGHT_MAGENTA)
+        typer.secho(f"Error: {zone} {e}", err=sys.stderr,
+                    fg=typer.colors.BRIGHT_MAGENTA)
         typer.Exit
+
 
 def spf_validator(mechanism: str, validate: bool = True):
     if not validate:
@@ -38,10 +41,11 @@ def spf_validator(mechanism: str, validate: bool = True):
             return False
 
 
-def spftree(zone: str, indent: int = 0, validate: bool = True):
+def get_spf_fields(zone: str):
     """
-    Create a tree structure of the zones SPF record
+    Split a spf record down to it's individual fields.
     """
+    fields = []
     record = get_spf_from_zone(zone)
 
     # FIXME Combine records with multiple strings
@@ -54,15 +58,29 @@ def spftree(zone: str, indent: int = 0, validate: bool = True):
 
         for field in spf_record.split():
             field = field.decode()
-            if spf_validator(field, validate):
-                typer.secho(' ' * indent + field, fg=typer.colors.GREEN)
-            else:
-                typer.secho(' ' * indent + field, fg=typer.colors.RED)
-            if field.find('include:') != -1:
-                nextzone = field[field.index(':')+1:]
-                spftree(nextzone, indent+2)
+            fields.append(field)
+        return fields
+
     except AttributeError as e:
-        typer.secho(f"Error: {zone} {e}", err=sys.stderr, fg=typer.colors.BRIGHT_MAGENTA)
+        typer.secho(f"Error: {zone} {e}", err=sys.stderr,
+                    fg=typer.colors.BRIGHT_MAGENTA)
+
+
+def spftree(zone: str, indent: int = 0, validate: bool = True):
+    """
+    Create a tree structure of the zones SPF record
+    """
+
+    fields = get_spf_fields(zone)
+
+    for field in fields:
+        if spf_validator(field, validate):
+            typer.secho(' ' * indent + field, fg=typer.colors.GREEN)
+        else:
+            typer.secho(' ' * indent + field, fg=typer.colors.RED)
+        if field.find('include:') != -1:
+            nextzone = field[field.index(':')+1:]
+            spftree(nextzone, indent+2)
 
 
 if __name__ == "__main__":
