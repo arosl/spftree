@@ -29,6 +29,10 @@ def get_spf_from_zone(zone: str, timeout: float = 1.0):
 
 
 def spf_validator(mechanism: str, validate: bool = True):
+    """
+    Validate if a mechanism is a known SPF mecanism or not.
+    If the validate param is set to false always return True.
+    """
     if not validate:
         return True
     else:
@@ -44,6 +48,7 @@ def spf_validator(mechanism: str, validate: bool = True):
 def get_spf_fields(zone: str):
     """
     Split a spf record down to it's individual fields.
+    Return a list with fields.
     """
     fields = []
     record = get_spf_from_zone(zone)
@@ -66,22 +71,24 @@ def get_spf_fields(zone: str):
                     fg=typer.colors.BRIGHT_MAGENTA)
 
 
-def spftree(zone: str, indent: int = 0, validate: bool = True):
+def spftree(fields: list, indent: int = 0, validate: bool = True):
     """
     Create a tree structure of the zones SPF record
     """
 
-    fields = get_spf_fields(zone)
-
     for field in fields:
-        if spf_validator(field, validate):
-            typer.secho(' ' * indent + field, fg=typer.colors.GREEN)
-        else:
-            typer.secho(' ' * indent + field, fg=typer.colors.RED)
-        if field.find('include:') != -1:
-            nextzone = field[field.index(':')+1:]
-            spftree(nextzone, indent+2)
+        typer.secho(' ' * indent + field, fg=typer.colors.WHITE)
+        if 'include:' in field:
+            #select the url after include and get the fields
+            nextzone = get_spf_fields(field.split(':')[1])
+            spftree(nextzone, indent+4)
+
+def main(zone: str, indent: int = 0, validate: bool = True):
+    fields = get_spf_fields(zone)
+    spftree(fields)
+
+
 
 
 if __name__ == "__main__":
-    typer.run(spftree)
+    typer.run(main)
