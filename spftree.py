@@ -58,7 +58,7 @@ def spftree(zone: str, indent: int = 0, validate: bool = True):
                 typer.secho(' ' * indent + field, fg=typer.colors.GREEN)
             else:
                 typer.secho(' ' * indent + field, fg=typer.colors.RED)
-            if field.find('include:') != -1:
+            if 'include:' in field:
                 nextzone = field[field.index(':')+1:]
                 spftree(nextzone, indent+2)
     except AttributeError as e:
