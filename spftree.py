@@ -3,17 +3,23 @@ import typer
 import sys
 import dns.resolver
 
-spf_keywords = ['all', 'a', 'ip4', 'ip6', 'mx',
-                'ptr', 'exists', 'include', 'redirect', 'v=spf1', '"v=spf1']
+spf_mechanisms = ['all', 'a', 'ip4', 'ip6', 'mx',
+                  'ptr', 'exists', 'include', 'v=spf1']
 spf_modifiers = ['+', '-', '~', '?']
+
+spf_keywords = spf_mechanisms
+for i in range(len(spf_mechanisms)):
+    for j in range(len(spf_modifiers)):
+        spf_keywords.append(f'{spf_modifiers[j]}{spf_mechanisms[i]}')
+
 spftree_model = []
 dns_counter = 0
 
 
 def get_spf_from_zone(zone: str, timeout: float = 1.0):
     """
-    Get SPF record from zone by checking if the TXT record contains 
-    valid spf keywords or mechanisms.
+    Get SPF record from zone by checking if the TXT record starts 
+    as valid SPF with exactly "v=spf1".
     """
     global dns_counter
     dns_counter += 1
@@ -23,7 +29,7 @@ def get_spf_from_zone(zone: str, timeout: float = 1.0):
         resolver = dns.resolver
         spf = resolver.resolve(zone, 'TXT', raise_on_no_answer=False)
         for record in spf:
-            if str(record).split()[0] in spf_keywords:
+            if str(record).split()[0] == '"v=spf1':
                 return record
     except Exception as e:
         typer.secho(f"Error: {zone} {e}", err=sys.stderr,
@@ -40,9 +46,9 @@ def spf_validator(mechanism: str, validate: bool = True):
         return True
     else:
         mechanism = mechanism.split(':')[0]
-        for c in spf_modifiers:
-            mechanism = mechanism.replace(c, '')
         if mechanism in spf_keywords:
+            return True
+        if mechanism.split('=')[0] == 'redirect':
             return True
         else:
             return False
@@ -113,10 +119,10 @@ def print_spftree(spftree_model: list, validate: bool = True, indent: int = 2):
 
 def print_dnscount(dns_counter: int, validate: bool = True):
     if validate and dns_counter <= 10:
-        typer.secho(f'DNS lookup is OK! \n{dns_counter} lookups is valid RFC 7208',
+        typer.secho(f'DNS lookup is OK! \n{dns_counter} lookups is valid RFC 7208 4.6.4',
                     fg=typer.colors.GREEN)
     if validate and dns_counter > 10:
-        typer.secho(f'DNS lookup is not OK! \n{dns_counter} lookups breaks RFC 7208',
+        typer.secho(f'DNS lookup is not OK! \n{dns_counter} lookups breaks RFC 7208 4.6.4',
                     fg=typer.colors.RED)
     if not validate:
         typer.echo(f'DNS lookups done {dns_counter} times.')
