@@ -2,6 +2,7 @@
 import typer
 import sys
 import dns.resolver
+from typer.models import NoneType
 
 
 spf_keywords = ['all', 'a', 'ip4', 'ip6', 'mx',
@@ -76,19 +77,23 @@ def get_spftree(fields: list, indent: int = 0):
     """
     Create a model of a tree structure of the SPF record
     """
-    for field in fields:
-        field_model = {
-            'field': field,
-            'valid': spf_validator(field),
-            'indent_level': indent
-        }
-        spftree_model.append(field_model)
-        if 'include:' in field:
-            # select the url after include and get the fields
-            nextzone = get_spf_fields(field.split(':')[1])
-            get_spftree(nextzone, indent+1)
+    try:
+        for field in fields:
+            field_model = {
+                'field': field,
+                'valid': spf_validator(field),
+                'indent_level': indent
+            }
+            spftree_model.append(field_model)
+            if 'include:' in field:
+                # select the url after include and get the fields
+                nextzone = get_spf_fields(field.split(':')[1])
+                get_spftree(nextzone, indent+1)
 
-    return spftree_model
+        return spftree_model
+    except Exception as e:
+        typer.secho(f"Error: {e}", err=sys.stderr,
+                    fg=typer.colors.BRIGHT_MAGENTA)
 
 
 def print_spftree(spftree_model: list, validate: bool = True, indent: int = 2):
