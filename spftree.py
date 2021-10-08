@@ -2,8 +2,6 @@
 import typer
 import sys
 import dns.resolver
-from typer.models import NoneType
-
 
 spf_keywords = ['all', 'a', 'ip4', 'ip6', 'mx',
                 'ptr', 'exists', 'include', 'redirect', 'v=spf1', '"v=spf1']
