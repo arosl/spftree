@@ -3,9 +3,11 @@ import typer
 import sys
 import dns.resolver
 
+
 spf_keywords = ['all', 'a', 'ip4', 'ip6', 'mx',
                 'ptr', 'exists', 'include', 'redirect', 'v=spf1', '"v=spf1']
 spf_modifiers = ['+', '-', '~', '?']
+spftree_model = []
 
 
 def get_spf_from_zone(zone: str, timeout: float = 1.0):
@@ -17,7 +19,6 @@ def get_spf_from_zone(zone: str, timeout: float = 1.0):
         # FIXME get to many timeouts for now, always after 5.4 sec.
         # setting resolver.timeout = timeout does not change the timeout.
         resolver = dns.resolver
-        resolver.nameservers = ['1.1.1.1', '1.0.0.1']
         spf = resolver.resolve(zone, 'TXT', raise_on_no_answer=False)
         for record in spf:
             if str(record).split()[0] in spf_keywords:
@@ -71,23 +72,42 @@ def get_spf_fields(zone: str):
                     fg=typer.colors.BRIGHT_MAGENTA)
 
 
-def spftree(fields: list, indent: int = 0, validate: bool = True):
+def get_spftree(fields: list, indent: int = 0):
     """
-    Create a tree structure of the zones SPF record
+    Create a model of a tree structure of the SPF record
     """
-
     for field in fields:
-        typer.secho(' ' * indent + field, fg=typer.colors.WHITE)
+        field_model = {
+            'field': field,
+            'valid': spf_validator(field),
+            'indent_level': indent
+        }
+        spftree_model.append(field_model)
         if 'include:' in field:
-            #select the url after include and get the fields
+            # select the url after include and get the fields
             nextzone = get_spf_fields(field.split(':')[1])
-            spftree(nextzone, indent+4)
+            get_spftree(nextzone, indent+1)
 
-def main(zone: str, indent: int = 0, validate: bool = True):
+    return spftree_model
+
+
+def print_spftree(spftree_model: list, validate: bool = True, indent: int = 2):
+    for item in spftree_model:
+        if validate and item.get('valid'):
+            typer.secho(' ' * (indent * item.get('indent_level')) +
+                        item.get('field'), fg=typer.colors.GREEN)
+        if validate and not item.get('valid'):
+            typer.secho(' ' * (indent * item.get('indent_level')) +
+                        item.get('field'), fg=typer.colors.RED)
+        if not validate:
+            typer.echo(' ' * (indent * item.get('indent_level')) +
+                       item.get('field'))
+
+
+def main(zone: str, indent: int = 4, validate: bool = True):
     fields = get_spf_fields(zone)
-    spftree(fields)
-
-
+    spftree = get_spftree(fields)
+    print_spftree(spftree, validate, indent)
 
 
 if __name__ == "__main__":
