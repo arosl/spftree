@@ -7,6 +7,7 @@ spf_keywords = ['all', 'a', 'ip4', 'ip6', 'mx',
                 'ptr', 'exists', 'include', 'redirect', 'v=spf1', '"v=spf1']
 spf_modifiers = ['+', '-', '~', '?']
 spftree_model = []
+dns_counter = 0
 
 
 def get_spf_from_zone(zone: str, timeout: float = 1.0):
@@ -14,6 +15,8 @@ def get_spf_from_zone(zone: str, timeout: float = 1.0):
     Get SPF record from zone by checking if the TXT record contains 
     valid spf keywords or mechanisms.
     """
+    global dns_counter
+    dns_counter += 1
     try:
         # FIXME get to many timeouts for now, always after 5.4 sec.
         # setting resolver.timeout = timeout does not change the timeout.
@@ -105,12 +108,25 @@ def print_spftree(spftree_model: list, validate: bool = True, indent: int = 2):
         if not validate:
             typer.echo(' ' * (indent * item.get('indent_level')) +
                        item.get('field'))
+    typer.echo('')
+
+
+def print_dnscount(dns_counter: int, validate: bool = True):
+    if validate and dns_counter <= 10:
+        typer.secho(f'DNS lookup is OK! \n{dns_counter} lookups is valid RFC 7208',
+                    fg=typer.colors.GREEN)
+    if validate and dns_counter > 10:
+        typer.secho(f'DNS lookup is not OK! \n{dns_counter} lookups breaks RFC 7208',
+                    fg=typer.colors.RED)
+    if not validate:
+        typer.echo(f'DNS lookups done {dns_counter} times.')
 
 
 def main(zone: str, indent: int = 4, validate: bool = True):
     fields = get_spf_fields(zone)
     spftree = get_spftree(fields)
     print_spftree(spftree, validate, indent)
+    print_dnscount(dns_counter, validate)
 
 
 if __name__ == "__main__":
