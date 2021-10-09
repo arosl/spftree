@@ -5,12 +5,11 @@ import dns.resolver
 
 spf_mechanisms = ['all', 'a', 'ip4', 'ip6', 'mx',
                   'ptr', 'exists', 'include', 'v=spf1']
-spf_modifiers = ['+', '-', '~', '?']
+spf_qualifiers = ['+', '-', '~', '?']
+spf_modifiers = ['redirect', 'exp']
 
-spf_keywords = spf_mechanisms
-for i in range(len(spf_mechanisms)):
-    for j in range(len(spf_modifiers)):
-        spf_keywords.append(f'{spf_modifiers[j]}{spf_mechanisms[i]}')
+spf_keywords = spf_mechanisms.copy()
+spf_keywords += [q + m for m in spf_mechanisms for q in spf_qualifiers]
 
 spftree_model = []
 dns_counter = 0
@@ -48,7 +47,7 @@ def spf_validator(mechanism: str, validate: bool = True):
         mechanism = mechanism.split(':')[0]
         if mechanism in spf_keywords:
             return True
-        if mechanism.split('=')[0] == 'redirect':
+        if mechanism.split('=')[0] in spf_modifiers:
             return True
         else:
             return False
