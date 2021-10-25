@@ -12,7 +12,7 @@ spf_keywords = spf_mechanisms.copy()
 spf_keywords += [q + m for m in spf_mechanisms for q in spf_qualifiers]
 
 spftree_model = []
-dns_counter = 0
+dns_counter = 1
 
 
 def get_spf_from_zone(zone: str, timeout: float = 1.0):
@@ -20,8 +20,6 @@ def get_spf_from_zone(zone: str, timeout: float = 1.0):
     Get SPF record from zone by checking if the TXT record starts 
     as valid SPF with exactly "v=spf1".
     """
-    global dns_counter
-    dns_counter += 1
     try:
         # FIXME get to many timeouts for now, always after 5.4 sec.
         # setting resolver.timeout = timeout does not change the timeout.
@@ -45,6 +43,9 @@ def spf_validator(mechanism: str, validate: bool = True):
         return True
     else:
         mechanism = mechanism.split(':')[0]
+        if mechanism in ['a', 'mx', 'ptr', 'include']:
+            global dns_counter
+            dns_counter += 1
         if mechanism in spf_keywords:
             return True
         if mechanism.split('=')[0] in spf_modifiers:
