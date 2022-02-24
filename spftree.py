@@ -12,20 +12,20 @@ spf_keywords = spf_mechanisms.copy()
 spf_keywords += [q + m for m in spf_mechanisms for q in spf_qualifiers]
 
 spftree_model = []
-dns_counter = 1
+dns_counter = 0
 
 
-def get_spf_from_zone(zone: str, timeout: float = 1.0):
+def get_spf_from_zone(zone: str, timeout: float = 5.0):
     """
     Get SPF record from zone by checking if the TXT record starts 
     as valid SPF with exactly "v=spf1".
     """
     try:
-        # FIXME get to many timeouts for now, always after 5.4 sec.
-        # setting resolver.timeout = timeout does not change the timeout.
-        resolver = dns.resolver
-        spf = resolver.resolve(zone, 'TXT', raise_on_no_answer=False)
-        for record in spf:
+        res = dns.resolver.Resolver()
+        res.nameservers = ['1.1.1.1', '1.0.0.1']
+        res.timeout = timeout
+        txt = res.resolve(zone, 'TXT', raise_on_no_answer=False)
+        for record in txt:
             if str(record).split()[0] == '"v=spf1':
                 return record
     except Exception as e:
@@ -104,6 +104,10 @@ def get_spftree(fields: list, indent: int = 0):
 
 
 def print_spftree(spftree_model: list, validate: bool = True, indent: int = 2):
+    if not spftree_model:
+        print("No SPF found")
+        return
+
     for item in spftree_model:
         if validate and item.get('valid'):
             typer.secho(' ' * (indent * item.get('indent_level')) +
