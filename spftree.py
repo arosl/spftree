@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import typer
 import sys
 import dns.resolver
 from typing import Optional
@@ -20,8 +19,8 @@ def get_spf_from_zone(zone: str, timeout: float = 1.0) -> Optional[dns.resolver.
             if str(record).split()[0] in spf_keywords:
                 return record
     except Exception as e:
-        typer.secho(f"Error: {zone} {e}", err=sys.stderr, fg=typer.colors.BRIGHT_MAGENTA)
-        typer.Exit()
+        print(f"Error: {zone} {e}", file=sys.stderr)
+        sys.exit(1)
 
 def spf_validator(mechanism: str, validate: bool = True) -> bool:
     """
@@ -44,14 +43,15 @@ def spftree(zone: str, indent: int = 0, validate: bool = True) -> None:
         spf_record = b''.join(record.strings).decode()
         for field in spf_record.split():
             if spf_validator(field, validate):
-                typer.secho(f"{' ' * indent}{field}", fg=typer.colors.GREEN)
+                print(f"{' ' * indent}{field}")
             else:
-                typer.secho(f"{' ' * indent}{field}", fg=typer.colors.RED)
+                print(f"{' ' * indent}{field}", file=sys.stderr)
             if 'include:' in field:
                 nextzone = field.split(':')[1]
                 spftree(nextzone, indent+2)
     except AttributeError as e:
-        typer.secho(f"Error: {zone} {e}", err=sys.stderr, fg=typer.colors.BRIGHT_MAGENTA)
+        print(f"Error: {zone} {e}", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
-    typer.run(spftree)
+    spftree(*sys.argv[1:])
